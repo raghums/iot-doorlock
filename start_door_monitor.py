@@ -9,15 +9,25 @@ SOL_GATE = 12
 # Set to your Adafruit IO key.
 # Remember, your key is a secret,
 # so make sure not to publish it when you publish this code!
-ADAFRUIT_IO_KEY = '<your adafruit io key>'
+ADAFRUIT_IO_KEY = '<key>'
 
 # Set to your Adafruit IO username.
 # (go to https://accounts.adafruit.com to find your username)
-ADAFRUIT_IO_USERNAME = '<your adafruit io username>'
+ADAFRUIT_IO_USERNAME = '<username>'
 
-# Create an instance of the REST client.
-aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
-
+def refresh_connection():
+  print("Refreshing connection.")
+  # Create an instance of the REST client.
+  global aio
+  aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
+  try:
+    global door
+    door = aio.feeds('door')
+  except RequestError: # Doesn't exist, create a new feed
+    # feed = Feed(name="foo")
+    # foo = aio.create_feed(feed)
+    print('No feed called Door.')
+    quit()
 
 def open_door():
   print("Opening door.\n")
@@ -38,15 +48,12 @@ def open_door():
     GPIO.setup(SOL_GATE, GPIO.IN)
     GPIO.cleanup()
 
-try:
-    door = aio.feeds('door')
-except RequestError: # Doesn't exist, create a new feed
-    # feed = Feed(name="foo")
-    # foo = aio.create_feed(feed)
-    print('No feed called Door.')
-    quit()
-
+counter = 0
 while(True):
+  if (counter % 300 == 0):
+    refresh_connection()
+    counter = 0
+
   data = aio.receive(door.key)
   value = data.value
   print('Retrieved value of : {0}'.format(data.value))
@@ -56,4 +63,4 @@ while(True):
     aio.send_data(door.key, 'CLOSED')
   else:
     sleep(1)
-
+  counter += 1
